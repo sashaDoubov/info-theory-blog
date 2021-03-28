@@ -142,7 +142,7 @@ Next, he visits Nevada - Death Valley for 100 days. There, he knows the weather 
 | Rain             | 1/100                  | 
 | Sun             | 99/100                  |  
 
-Here, Bob believes that _on average_, he should only get 1 day of rain in his 100 day stay. Hence, he changes his code to be the _day on which rain occurs in Death Valley_. Ex. if it rains on the second day, he sends the binary symbol for a 2 ie. 01. For this code, he needs to be able to send the binary messsage for at most 100, in case it rains on the 100th day. This means that the total message length is $\log 100$ because the number 100 in binary is 1100100. Hence, he'll be sending a messsage that is  ~7 digits long. 
+Here, Bob believes that _on average_, he should only get 1 day of rain in his 100 day stay. Hence, he changes his code to be the _day on which rain occurs in Death Valley_. Ex. if it rains on the second day, he sends the binary symbol for a 2 ie. 01. For this code, he needs to be able to encode up to the value 100, in case it rains on the 100th day. This means he'll need up to log(100), or ~7 digits.
 
 Hence, the average amount of information per day in Death Valley is ~0.07, since ~7/100 = 0.07.
 
@@ -183,7 +183,7 @@ From our entropy term, we know that $\log \frac{1}{P(X)}$ gives us the length of
 As before, we want to figure out how long the average code is using this scheme, which means that we use expectation. Note that, the expectation is with respect to the distribution $P$, since the variable follows that distribution, not our approximated $Q$ term.
 
 $$
-\mathbb{E}_{x \sim P}[\log \frac{1}{P(X)}] = \sum_{x \in X} P(x)\log  \frac{1}{Q(x)} 
+\mathbb{E}_{x \sim P}[\log \frac{1}{Q(X)}] = \sum_{x \in X} P(x)\log  \frac{1}{Q(x)} 
 $$
 
 In fact, this _is_ cross entropy (denoted by $H(p, q)$! In other words, we are measuring how many bits we will need to describe a symbol $X \sim P$ if we use a coding scheme meant for $X \sim Q$. 
@@ -228,9 +228,11 @@ For this part, I want to focus on cross-entropy and KL divergence separately, an
 
 ### KL Divergence for probability distributions
 
-In machine learning, we often have some complicated _true_ distribution $P$ that consists of the data, and we are trying to learn a distribution $Q$ that approximates this true distribution. In order to learn this distribution, we need to know how close our model is to the true distribution, and voila, we need some _distance_ between the true distribution of our data and our learned model! 
+In machine learning, we often have some complicated _true_ distribution $P$ that consists of the data, and we are trying to learn a distribution $Q$ that approximates this true distribution. To emphasize that we are learning this distribution, we say that $Q_{\theta}$ is a parametric distribution with parameters $\theta$. In machine learning, we typically find the optimal $\theta$ using gradient descent.
 
-Why can't we borrow a commonly used distance function, like squared euclidian distance, ie. $\sum_{x \in X}|p(x) - q(x)|^2$ ? Let's show this graphically. Below we have two different distributions, one with two sharp peaks with with little overlap, and another with spread out distributions that have some areas that are far apart. 
+In order to learn this distribution, we need to know how close our approximate distribution is to the true distribution, and voila, we need some _distance_ between the true distribution of our data and our learned approximate distribution! 
+
+Why can't we borrow a commonly used distance function, like squared euclidian distance, ie. $\sum_{x \in X}|p(x) - q_{\theta}(x)|^2$ ? Let's show this graphically. Below we have two different distributions, one with two sharp peaks with with little overlap, and another with spread out distributions that have some areas that are far apart. 
 
 ![](pictures/two_distrib.jpg)
 
@@ -243,28 +245,28 @@ How does the KL divergence account for this? As we know, it tells us how many mo
 Another cool connection is that Maximum Likelihood Estimation (ie. maximizing the MLE term) is actually equivalent to minimizing the KL divergence, as derived in this [blog post](https://wiseodd.github.io/techblog/2017/01/26/kl-mle/). This requires some further background but is highly recommended reading for those interested!
 
 #### Support
-In the information theory setting, we assumed that our "alphabet" of symbols $X$ was the same for the distributions $P$ and $Q$. However, this doesn't always have to be true, and the _support_, the places where each distribution has non-zero values, might be different for both distributions. 
+In the information theory setting, we assumed that our "alphabet" of symbols $X$ was the same for the distributions $P$ and $Q_{\theta}$. However, this doesn't always have to be true, and the _support_, the places where each distribution has non-zero values, might be different for both distributions. 
 
 To make that even more clear, the support of the distribution $P$ is wherever $P(x) \neq 0$ for some $x$. 
 If we look at our usual definition of KL divergence as:
 
 $$
- D_{KL}(P || Q) = \sum_{x \in X} P(x)\log  \frac{P(x)}{Q(x)}
+ D_{KL}(P || Q_{\theta}) = \sum_{x \in X} P(x)\log  \frac{P(x)}{Q_{\theta}(x)}
 $$
 
-We notice that there's a fraction $\frac{P(x)}{Q(x)}$ within the $\log$ term. If $Q(x)$ is 0 for some $x$ but $P(x) \gt 0$, then this term blows up and goes to infinity! More mathematically, we need the _support_ of $P$ to be within $Q$, otherwise the KL divergence goes to infinity.
+We notice that there's a fraction $\frac{P(x)}{Q_{\theta}(x)}$ within the $\log$ term. If $Q_{\theta}(x)$ is 0 for some $x$ but $P(x) \gt 0$, then this term blows up and goes to infinity! More mathematically, we need the _support_ of $P$ to be within $Q_{\theta}$, otherwise the KL divergence goes to infinity.
 
 #### Forward and Reverse KL
 
 We've discussed that KL divergence can be used to measure the distance between distributions, through this lens of information gain. When does this come up in practice?
 
-Similarly to the information theory setting, we can assume that there is a true distribution $P$ that we are trying to approximate with the distribution $Q$. 
+Similarly to the information theory setting, we can assume that there is a true distribution $P$ that we are trying to approximate with the distribution $Q_{\theta}$. 
 
-First consider minimizing $D_{KL}(P || Q)$, the usual KL divergence term. This is called *forward-mode* KL divergence, where we are measuring the KL divergence assuming that $P$ is the true distribution (as it should be).
+First consider minimizing $D_{KL}(P || Q_{\theta})$, the usual KL divergence term. This is called *forward-mode* KL divergence, where we are measuring the KL divergence assuming that $P$ is the true distribution (as it should be).
 
-However, we can equally speak about *reverse-mode* KL divergence, where the "true" distribution is our approximated distribution $Q$ which is defined as $D_{KL}(Q || P)$
+However, we can equally speak about *reverse-mode* KL divergence, where the "true" distribution is our approximated distribution $Q_{\theta}$ which is defined as $D_{KL}(Q_{\theta} || P)$
 
-Why does this matter? KL divergence is not symmetric (in general) so $D_{KL}(P || Q) \neq D_{KL}(Q || P)$
+Why does this matter? KL divergence is not symmetric (in general) so $D_{KL}(P || Q_{\theta}) \neq D_{KL}(Q_{\theta} || P)$
 
 Here's the rule of thumb that I like to use: if we have supervision/labelled data, we should be using *forward mode* KL divergence, and if we do not, we should use *reverse-mode* KL divergence. In essence, the labels/supervision give us the true distribution in our problem, so we should opt to use that if we can.
 
@@ -272,34 +274,34 @@ Let's get a little more insights into how these two behave differently. We'll be
 
 ![](pictures/distrib_alone.jpg)
 
-We are trying to minimize either the forward KL or reverse KL, which means that we'll be trying to fit a distribution $Q$ that minimizes either one of these "distances".  
+We are trying to minimize either the forward KL or reverse KL, which means that we'll be trying to fit a distribution $Q_{\theta}$ that minimizes either one of these "distances".  
 
 #### Forward Mode KL
 
 As before, we can decompose the KL divergence into cross-entropy and entropy terms:
 
 $$
- D_{KL}(P || Q) = H(P, Q) - H(P)
+ D_{KL}(P || Q_{\theta}) = H(P, Q_{\theta}) - H(P)
 $$
 
-In the forward KL case, we have no control over the entropy term $H(P)$ which isn't a function of $Q$ and the best we can do is minize the cross-entropy term $H(P, Q)$. 
+In the forward KL case, we have no control over the entropy term $H(P)$ which isn't a function of $Q_{\theta}$ and the best we can do is minize the cross-entropy term $H(P, Q_{\theta})$. 
 
 The cross-entropy term is:
 
 $$
-H(P, Q) = \mathbb{E}_{x \sim P}[\log \frac{1}{Q(x)}] = \sum_{x \in X} P(x)\log  \frac{1}{Q(x)} 
+H(P, Q_{\theta}) = \mathbb{E}_{x \sim P}[\log \frac{1}{Q_{\theta}(x)}] = \sum_{x \in X} P(x)\log  \frac{1}{Q_{\theta}(x)} 
 $$
 
-As we saw in the _support_ section, if $P(x) > 0$ but $Q(x) = 0$, the cross-entropy goes to infinity. To avoid this when minimizing the loss, our approximated $Q(x)$ will spread out to be defined everywhere that $P(x)$ has support. 
+As we saw in the _support_ section, if $P(x) > 0$ but $Q_{\theta}(x) = 0$, the cross-entropy goes to infinity. To avoid this when minimizing the loss, our approximated $Q_{\theta}(x)$ will spread out to be defined everywhere that $P(x)$ has support. 
 
-Visually, this looks like the following (where the red curve is $P$ and the blue curve is $Q$):
+Visually, this looks like the following (where the red curve is $P$ and the blue curve is $Q_{\theta}$):
 
 
 ![](pictures/forward_kl.jpg)
 
 This behaviour is called _zero-avoiding_, as the approximated distribution avoids being $0$ in places where the true distribution is _non-zero_.
 
-The other major quality of the cross-entropy term is that our approximated distribution $Q$ should have high probability where $P$ has high probability. _However_, the forward KL does not heavily penalize those places where $P$ is low, but $Q$ is high (such as the spot between the two peaks of the red curve). This is called _mean-seeking_ behaviour.
+The other major quality of the cross-entropy term is that our approximated distribution $Q_{\theta}$ should have high probability where $P$ has high probability. _However_, the forward KL does not heavily penalize those places where $P$ is low, but $Q_{\theta}$ is high (such as the spot between the two peaks of the red curve). This is called _mean-seeking_ behaviour.
 
 #### Reverse Mode KL
 
@@ -307,37 +309,37 @@ We can do a similar decomposition to the reverse mode KL as we did for the forwa
 
 
 $$
- D_{KL}(Q || P) = H(Q, P) - H(Q)
+ D_{KL}(Q_{\theta} || P) = H(Q_{\theta}, P) - H(Q_{\theta})
 $$
 
 where:
 
 $$
-H(Q, P) = \mathbb{E}_{x \sim Q}[\log \frac{1}{P(x)}] = \sum_{x \in X} Q(x)\log  \frac{1}{P(x)}
+H(Q_{\theta}, P) = \mathbb{E}_{x \sim Q_{\theta}}[\log \frac{1}{P(x)}] = \sum_{x \in X} Q_{\theta}(x)\log  \frac{1}{P(x)}
 $$
 
 and 
 
 $$
-H(Q) = \mathbb{E}_{x \sim Q}[\log \frac{1}{Q(x)}]  = \sum_{x \in X} Q(x)\log \frac{1}{Q(x)}
+H(Q_{\theta}) = \mathbb{E}_{x \sim Q_{\theta}}[\log \frac{1}{Q_{\theta}(x)}]  = \sum_{x \in X} Q_{\theta}(x)\log \frac{1}{Q_{\theta}(x)}
 $$
 
 
-How does the reverse KL behave? The entropy term $H(Q)$ grows larger when the distribution $Q$ is more spread out (recall: more spread out == more "uncertainty", leading to higher entropy). This term stops our approximated distribution $Q$ from being too narrow.
+How does the reverse KL behave? The entropy term $H(Q_{\theta})$ grows larger when the distribution $Q_{\theta}$ is more spread out (recall: more spread out == more "uncertainty", leading to higher entropy). This term stops our approximated distribution $Q_{\theta}$ from being too narrow.
 
 The cross-entropy term behaves differently than in the forward mode KL case. Here's a visual example:
 
 ![](pictures/reverse_kl.jpg)
 
-The _support_ of $P$ is no longer a critical factor in our approximated distribution, as the $Q$ curve might only overlap with part of the $P$ distribution. This is known as _zero-forcing_ behaviour, because our approximated $Q$ may ignore parts of the distribution where $P$ is lower and force it to go to $0$.
+The _support_ of $P$ is no longer a critical factor in our approximated distribution, as the $Q_{\theta}$ curve might only overlap with part of the $P$ distribution. This is known as _zero-forcing_ behaviour, because our approximated $Q_{\theta}$ may ignore parts of the distribution where $P$ is lower and force it to go to $0$.
 
-Similarly, the cross-entropy term is minimized when samples in $Q$ that have high probability also have high-probability under $P$. Combined with the _zero-forcing_ behaviour, the reverse KL collapses on one of the peaks (or the _modes_) of our true distribution $P$, since that is high probability under $Q$. This leads to to the reverse KL having _mode-seeking_ behaviour, where it might collapse to one of the peaks/modes of the true distribution.
+Similarly, the cross-entropy term is minimized when samples in $Q_{\theta}$ that have high probability also have high-probability under $P$. Combined with the _zero-forcing_ behaviour, the reverse KL collapses on one of the peaks (or the _modes_) of our true distribution $P$, since that is high probability under $Q_{\theta}$. This leads to to the reverse KL having _mode-seeking_ behaviour, where it might collapse to one of the peaks/modes of the true distribution.
 
-**Takeaways**: KL divergence behaves differently depending on whether $P$ or $Q$ is the true distribution. Unfortunately, we do not always have a choice between forward and reverse KL. This depends on where we can get _samples_ of $x$ from, to estimate the expectation term in the KL divergence. 
+**Takeaways**: KL divergence behaves differently depending on whether $P$ or $Q_{\theta}$ is the true distribution. Unfortunately, we do not always have a choice between forward and reverse KL. This depends on where we can get _samples_ of $x$ from, to estimate the expectation term in the KL divergence. 
 
 If we have supervision/labelled data, we can get samples $x$ from the true distribution $P$, and so we can use forward KL.
 
-In an unsupervised ML setting, we are only be able to sample $x$ from $Q$, so we are forced to use the reverse KL. 
+In an unsupervised ML setting, we are only be able to sample $x$ from $Q_{\theta}$, so we are forced to use the reverse KL. 
 
 Still, it's useful to understand the differences between the two directions of KL divergence when you are implementing real-world machine learning models! 
 
@@ -350,30 +352,30 @@ First, we will squash the output of our neural network so that our output $\hat{
 
 Next, we know our true class label, $y$. To make sure that this aligns with the output of our vector $\hat{y}$, we turn this into a vector of length 3, assigning a 1 to the correct class and a 0 to the incorrect class. Notice how this also sums to 1 and satisfies the properties of a probability distribution!
 
-Now, we have two vectors $y$ and $\hat{y}$, which we interpret as two probability distributions, $P$ and $Q$. We would like to minimize the difference between these two distributions. Here, our true distribution is $P$ and our approximated distribution is $Q$. 
+Now, we have two vectors $y$ and $\hat{y}$, which we interpret as two probability distributions, $P$ and $Q_{\theta}$. We would like to minimize the difference between these two distributions. Here, our true distribution is $P$ and our approximated distribution is $Q_{\theta}$. 
 
 Let's make this concrete with a picture:
 ![](pictures/cat_classifier.jpg)
 
-First, notice that having the label $y$ tells us that the true distribution for the image $x$ is $P$, which we are approximating with $Q$.
+First, notice that having the label $y$ tells us that the true distribution for the image $x$ is $P$, which we are approximating with $Q_{\theta}$.
 
 Now, which one of our two main concepts should we apply: KL divergence or cross-entropy? Our gut instinct might be KL divergence, after all, there was a whole section on using it to measure distances between probability distributions. 
 
 Let's write out the expression for KL divergence, in terms of entropy and cross-entropy:
 $$
- D_{KL}(P || Q) = H(P, Q) - H(P)
+ D_{KL}(P || Q_{\theta}) = H(P, Q_{\theta}) - H(P)
 $$
 
-Here, notice that the second term, $H(P)$ does not depend on our classifier, as that is the entropy of the true distribution and is outside of our control! Hence, if we want to minimize this term, we may as well minimize the cross-entropy $H(P, Q)$, which is affected by our classifier output.
+Here, notice that the second term, $H(P)$ does not depend on our classifier, as that is the entropy of the true distribution and is outside of our control! Hence, if we want to minimize this term, we may as well minimize the cross-entropy $H(P, Q_{\theta})$, which is affected by our classifier output.
 
-When we want to minimize something in optimization, we typically call it a "loss" function, and so we label the term $H(P,Q)$ as the cross-entropy loss. Returning to our example, here's how that looks like:
+When we want to minimize something in optimization, we typically call it a "loss" function, and so we label the term $H(P,Q_{\theta})$ as the cross-entropy loss. Returning to our example, here's how that looks like:
 ![](pictures/entropy_calc.jpg)
 
-There's a couple of simple tricks in there that make the calculation a little different from what we've seen before. We use the simple $\log$ identity: $\log (\frac{1}{x}) = -\log(x)$ to get rid of the fraction in the cross-entropy loss term. We also replace the summation of each term with a dot product between the two vectors representing $P$ and $Q$.
+There's a couple of simple tricks in there that make the calculation a little different from what we've seen before. We use the simple $\log$ identity: $\log (\frac{1}{x}) = -\log(x)$ to get rid of the fraction in the cross-entropy loss term. We also replace the summation of each term with a dot product between the two vectors representing $P$ and $Q_{\theta}$.
 
 After applying these tricks, we see that the cross-entropy loss is 0.322, which represents the average number of bits needed to encode the cat image using our model. Note that the true distribution $P$ is fully deterministic, with no uncertainty (ie. $x$ is always a cat), and so the entropy is zero! This means that our predictor still has some ways to go before it can perfectly predict the cat image and obtain zero loss. 
 
-So, we now know that the cross-entropy loss term refers to how many bits of information we need to encode the actual label of our cat image $x$, with the code that we made with our model $Q$. That's the story behind cross-entropy loss!
+So, we now know that the cross-entropy loss term refers to how many bits of information we need to encode the actual label of our cat image $x$, with the code that we made with our model $Q_{\theta}$. That's the story behind cross-entropy loss!
 
 ### Summary
 

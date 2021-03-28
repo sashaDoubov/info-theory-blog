@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>KL divergence &amp; Cross-Entropy: A crash course in information theory</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      word-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">KL divergence &amp; Cross-Entropy: A crash course in information theory</h1>
+</header>
+<p><strong>Sasha Doubov</strong></p>
+<p>The concept of KL divergence and cross-entropy comes up <strong>all</strong> the time in machine learning whether you are training a classification model or minimizing the <a href="https://en.wikipedia.org/wiki/Evidence_lower_bound">ELBO</a>.</p>
+<p>Today, I want to delve into the information theory roots of these two terms and how they apply to machine learning. This will be a teaser into information theory, which is a beautiful field whose insights are applied all the time in Machine Learning.</p>
+<p>I’ll be covering it in 4 distinct parts:</p>
+<ol type="1">
+<li>Entropy</li>
+<li>Information and Randomness</li>
+<li>Cross-Entropy and KL divergence</li>
+<li>Machine Learning</li>
+</ol>
+<!--- 
+1. The motivation and high-level ideas behind KL divergence and cross-entropy
+2. Entropy
+3. Information and Randomness
+4. Cross-Entropy and KL divergence
+5. Machine Learning
+--->
+<!--- 
+## KL Divergence: Motivation
+
+At its core, KL divergence is all about measuring how different two probability distributions are.
+
+As a refresher, a probability distribution $P(X)$ describes how much probability each outcome of the random variable $X$ is assigned. For example, if $X$ represents the outcome of a fair coin, then $P(X = tails) = \frac{1}{2}$ and $P(X = heads) = \frac{1}{2}$. Graphically, this looks like the following: 
+
+Of course, probability distributions in the wild are usually more complicated than our simple heads/tails example. Hence, what we are looking for is some sort of function that quantifies the _distance_ between two distributions $P$ and $Q$ (Note: that the word _distance_ is underlined for a reason, but more on that later).
+
+Why do we care about this problem? In machine learning, we often have some complicated _true_ distribution $P$ that consists of the data, and we are trying to learn a distribution $Q$ that approximates this true distribution. In order to learn this distribution, we need to know how close our model is to the true distribution, and voila, we need some _distance_ between the true distribution of our data and our learned model! 
+
+Why can't we borrow a commonly used distance function, like squared euclidian distance, ie. $\sum_{x \in X}|p(x) - q(x)|^2$ ? Let's show this graphically. Below we have two different distributions, one with two sharp peaks with no overlap, and another with spread our distributions that have some areas that are far apart. 
+
+If we use the Euclidian distance, the points in both distributions are pretty close together (in absolute terms) and so the value of this distance will be relatively small. For the overlapping distributions, the absolute values between the different points on the curve will be large, and so the euclidian distance will be relatively large.
+
+This isn't how we want our function to work, as we want it to account for the shape of the distribution and have a small difference for the overlapping distributions, and a larger one for the non-overlapping ones.
+
+Mathematically, one way to measure this is with the KL divergence, which is defined as:
+$$
+D(P || Q) = \sum_{x \in X} P(x)\log(\frac{P(x)}{Q(x)})
+$$
+--->
+<h2 id="entropy">Entropy</h2>
+<p>What is entropy and why do we use care about in machine learning? Entropy comes up in many fields, including physics, thermodynamics, but today I’ll be discussing it in terms of <em>information</em>.</p>
+<p>Mathematically, entropy is defined as: <span class="math display">\[
+H(X) = \mathbb{E}_{x \sim P}[\log \frac{1}{P(X)}] = \sum_{x \in X} P(x)\log \frac{1}{P(x)}
+\]</span> where <span class="math inline">\(X\)</span> is a random variable and <span class="math inline">\(P\)</span> is a distribution.</p>
+<p>What does this value represent? Intuitively, it measures how many <em>bits</em> are needed to describe a variable <span class="math inline">\(X\)</span> (when using <span class="math inline">\(\log\)</span> base 2). A <em>bit</em> is a unit in computing, which can only be a 1 or 0.</p>
+<p>This is best illustrated through an example:</p>
+<p>Suppose we are trying to transmit 4 possible letters, A, B, C, D using a binary code (made up of 1s and 0s).</p>
+<p>Suppose that the symbols occur with the following frequencies:</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Symbol - <span class="math inline">\(X\)</span></th>
+<th style="text-align: center;">Frequency - <span class="math inline">\(P\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">A</td>
+<td style="text-align: center;">1/2</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">B</td>
+<td style="text-align: center;">1/4</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">C</td>
+<td style="text-align: center;">1/8</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">D</td>
+<td style="text-align: center;">1/8</td>
+</tr>
+</tbody>
+</table>
+<p>How should we assign a binary code to these symbols? The natural approach is to simply assign 2 binary digits per symbol, as follows:</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Symbol - <span class="math inline">\(X\)</span></th>
+<th style="text-align: center;">Frequency - <span class="math inline">\(P\)</span></th>
+<th style="text-align: center;">Code</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">A</td>
+<td style="text-align: center;">1/2</td>
+<td style="text-align: center;">00</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">B</td>
+<td style="text-align: center;">1/4</td>
+<td style="text-align: center;">01</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">C</td>
+<td style="text-align: center;">1/8</td>
+<td style="text-align: center;">10</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">D</td>
+<td style="text-align: center;">1/8</td>
+<td style="text-align: center;">11</td>
+</tr>
+</tbody>
+</table>
+<p>Next, we’ll assume that we are trying to transmit some random sequence of these symbols A, B, C, D, which will naturally follow the distribution <span class="math inline">\(P\)</span>. Since we don’t know what the message is actually going to be, we’ll want to find the <em>expected</em> length of the code, where <span class="math inline">\(L(X)\)</span> denotes the length of the assigned code to the symbol.</p>
+<p><span class="math display">\[
+\mathbb{E}[L(X)] = \sum_{x} P(x) L(x)
+\]</span></p>
+<p>In this case, all the codes have length 2, so the expectation is:</p>
+<p><span class="math display">\[
+\mathbb{E}[L(X)] = \sum_{x} P(x) L(x) = \frac{1}{2} \cdot 2 + \frac{1}{4}  \cdot 2  + \frac{1}{8}  \cdot 2  + \frac{1}{8} \cdot 2 = 2
+\]</span></p>
+<p>This means that the average length of transmitted code is 2. For example, if we were to send a message consisting of A, B, C, D of length 10, on average this would require 20 digits! While this approach is intuitive, it’s not optimal. Why? We aren’t making use of the different probabilities assigned to each symbol. Instead, let’s try using:</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Symbol - <span class="math inline">\(X\)</span></th>
+<th style="text-align: center;">Frequency - <span class="math inline">\(P\)</span></th>
+<th style="text-align: center;">Code</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">A</td>
+<td style="text-align: center;">1/2</td>
+<td style="text-align: center;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">B</td>
+<td style="text-align: center;">1/4</td>
+<td style="text-align: center;">10</td>
+</tr>
+<tr class="odd">
+<td style="text-align: center;">C</td>
+<td style="text-align: center;">1/8</td>
+<td style="text-align: center;">110</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">D</td>
+<td style="text-align: center;">1/8</td>
+<td style="text-align: center;">111</td>
+</tr>
+</tbody>
+</table>
+<p>The expected average length of the code is:</p>
+<p><span class="math display">\[
+\mathbb{E}[L(X)] = \sum_{x} p(x) L(x) = \frac{1}{2} \cdot 1 + \frac{1}{4}  \cdot 2  + \frac{1}{8}  \cdot 3  + \frac{1}{8} \cdot 3 = 1.75
+\]</span></p>
+<p>Which is shorter than 2. What’s more, this is <em>exactly</em> equal to <span class="math inline">\(H(X)\)</span> (entropy), since:</p>
+<p><span class="math display">\[
+H(X) = \sum_{x \in X} P(x)\log  \frac{1}{P(x)} = \frac{1}{2} \cdot \log 2 + \frac{1}{4}  \cdot \log 4  + \frac{1}{8}  \cdot \log 8  + \frac{1}{8} \cdot \log 8 = 1.75 
+\]</span></p>
+<p>This is no coincidence! In fact, entropy gives us the minimum number of bits needed to describe a symbol <span class="math inline">\(X\)</span>. If we do some pattern matching between <span class="math inline">\(H(X)\)</span> and <span class="math inline">\(\mathbb{E}[L(X)]\)</span>, we recognize that the length of the optimal code for a symbol should be <span class="math inline">\(\log \frac{1}{P(X)}\)</span>. As with our formula for expected length, the entropy equation itself is an expectation, ie: <span class="math display">\[
+H(X) = \mathbb{E}[\log \frac{1}{P(X)}] = \sum_{x \in X} P(x)\log  \frac{1}{P(x)}  
+\]</span></p>
+<p>Note, that in our example, <span class="math inline">\(P\)</span> had values that were powers of 2, which means that for each value of X, the length is a nice, whole number. What happens if it’s not a power of 2? We can’t transmit a fraction of a bit through our system <em>but</em> we can imagine that if we had to send a really long message string, the <em>average</em> number of bits we need would indeed be <span class="math inline">\(H(X)\)</span>.</p>
+<p><strong>Takeaways:</strong> Entropy, <span class="math inline">\(H(X)\)</span> measures how many bits are needed to describe a symbol <span class="math inline">\(X\)</span> that follows a distribution <span class="math inline">\(P\)</span>.</p>
+<h2 id="entropy-and-randomness">Entropy and Randomness</h2>
+<p>In the last section, I described the formula for entropy and discussed what it means. In this section, I’m going to make the math concrete, with a more tangible example.</p>
+<p>Let’s assume Bob is a statistics nerd who’s been sending the weather of his travels to his fiance, Alice. He stays at a place in the country, and then sends a binary code at the end of the trip that tells her all the days that it’s been rainy and sunny.</p>
+<p>First, Bob stays in San Francisco for 100 days (they have a long-distance relationship). There, he knows that the weather follows the following pattern:</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Weather - <span class="math inline">\(X\)</span></th>
+<th style="text-align: center;">Frequency - <span class="math inline">\(P\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">Rain</td>
+<td style="text-align: center;">1/2</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">Sun</td>
+<td style="text-align: center;">1/2</td>
+</tr>
+</tbody>
+</table>
+<p>What binary code should he use to tell Alice the weather? Here, every day is equally likely to have rain or sun, so he just encodes rain = 1, sun = 0. The length of his message will be 100 bits long (binary digits) and so the average amount of information per day in SF is 1 bit.</p>
+<p>Next, he visits Nevada - Death Valley for 100 days. There, he knows the weather follows this pattern:</p>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: center;">Weather - <span class="math inline">\(X\)</span></th>
+<th style="text-align: center;">Frequency - <span class="math inline">\(P\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: center;">Rain</td>
+<td style="text-align: center;">1/100</td>
+</tr>
+<tr class="even">
+<td style="text-align: center;">Sun</td>
+<td style="text-align: center;">99/100</td>
+</tr>
+</tbody>
+</table>
+<p>Here, Bob believes that <em>on average</em>, he should only get 1 day of rain in his 100 day stay. Hence, he changes his code to be the <em>day on which rain occurs in Death Valley</em>. Ex. if it rains on the second day, he sends the binary symbol for a 2 ie. 01. For this code, he needs to be able to encode up to the value 100, in case it rains on the 100th day. This means he’ll need up to log(100), or ~7 digits.</p>
+<p>Hence, the average amount of information per day in Death Valley is ~0.07, since ~7/100 = 0.07.</p>
+<p>Does this match up with our definition of entropy? Let’s substitute the frequencies from our tables for SF and Death Valley.</p>
+<p>In SF: <span class="math display">\[
+H(X) = \frac{1}{2} \cdot \log 2 + \frac{1}{2} \cdot \log 2  = 1 
+\]</span></p>
+<p>In Death Valley:</p>
+<p><span class="math display">\[
+H(X) = 0.01 \cdot \log 100 + 0.99 \cdot \log 0.99  \approx  0.01 \cdot \log 100  = 0.0664
+\]</span></p>
+<p>(Because <span class="math inline">\(\log 0.99 \approx \log 1 = 0\)</span>)</p>
+<p>As before, we see that the definition of entropy matches up with Bob’s coding scheme. Now, a couple questions may arise:</p>
+<ol type="1">
+<li>What if it rains more than 1 day in Death Valley? How will Bob send Alice the weather then?</li>
+<li>Why is it that the more unpredicatble the weather, the more bits of information it contains?</li>
+</ol>
+<p>These are both very good questions. For Question 1, the answer is that this isn’t a practical code but instead a code for the “average case”. This is reasonable because we can prove that when you observe a lot of events/symbols in a sequence, it becomes very likely that the frequency of the symbols will match your distribution. For example, Bob can reasonably expect to get around 1/100 days of rain if he stays in Nevada for 1 million days.</p>
+<p>Question 2 is a key insight into what entropy is actually measuring. One can think of entropy as the amount of uncertainty about something. Intuitively, it’s harder to compress random sequences than patterned ones, because you can’t leverage any patterns in the random sequences! For a discrete set of symbols, variables that come from a uniform distribution (each symbol is equally likely), are the ones that have highest entropy, ie: the highest uncertainty/information.</p>
+<h2 id="kl-divergence-and-cross-entropy">KL Divergence and Cross Entropy</h2>
+<p>Now, you should have a pretty good idea of what entropy is. Where does cross-entropy come in?</p>
+<p>As we said before, entropy tells us how many bits are needed to describe a symbol <span class="math inline">\(X\)</span> given that it follows a distribution <span class="math inline">\(P\)</span>. But what happens if we don’t know the distribution <span class="math inline">\(P\)</span>? Well in this case, we want to figure out just how bad (how long) our code will be if we don’t know it. Of course, we can make some assumptions about what <span class="math inline">\(P\)</span> looks like and approximate it with a distribution, say <span class="math inline">\(Q\)</span>.</p>
+<p>From our entropy term, we know that <span class="math inline">\(\log \frac{1}{P(X)}\)</span> gives us the length of the code we should use for <span class="math inline">\(X\)</span>. But if we don’t know <span class="math inline">\(P\)</span>, but we do know <span class="math inline">\(Q\)</span>, the length of our code is now: <span class="math inline">\(\log \frac{1}{Q(X)}\)</span>.</p>
+<p>As before, we want to figure out how long the average code is using this scheme, which means that we use expectation. Note that, the expectation is with respect to the distribution <span class="math inline">\(P\)</span>, since the variable follows that distribution, not our approximated <span class="math inline">\(Q\)</span> term.</p>
+<p><span class="math display">\[
+\mathbb{E}_{x \sim P}[\log \frac{1}{Q(X)}] = \sum_{x \in X} P(x)\log  \frac{1}{Q(x)} 
+\]</span></p>
+<p>In fact, this <em>is</em> cross entropy (denoted by <span class="math inline">\(H(p, q)\)</span>! In other words, we are measuring how many bits we will need to describe a symbol <span class="math inline">\(X \sim P\)</span> if we use a coding scheme meant for <span class="math inline">\(X \sim Q\)</span>.</p>
+<p>In the last section, we learned that the optimal code for <span class="math inline">\(X \sim P\)</span> is given by <span class="math inline">\(H(X)\)</span>. A natural question to ask is, how many more extra bits do we need to use when using the “wrong” code for <span class="math inline">\(Q\)</span> compared to the optimal code? This is simply <span class="math inline">\(H(P, Q) - H(P)\)</span> or:</p>
+<p><span class="math display">\[
+ D_{KL}(P || Q) = H(P, Q) - H(P) = \sum_{x \in X} P(x)\log  \frac{1}{Q(x)}  - \sum_{x \in X} P(x)\log  \frac{1}{P(x)}  =\sum_{x \in X} P(x)\log  \frac{P(x)}{Q(x)} 
+\]</span></p>
+<p>Here, I’ve taken the extra-step and equated the term <span class="math inline">\(D_{KL}(P || Q)\)</span> to this expression, or the KL divergence. In other words, KL divergence measures the relative gain of bits that we require to encode our symbol if we are using a different code.</p>
+<p>(Small note on notation, I have used <span class="math inline">\(H(X)\)</span> to denote entropy throughout the section, but when writing out the expression for KL divergence, I replaced it with <span class="math inline">\(H(P)\)</span> to make it clear that we are referring to entropy where <span class="math inline">\(X \sim P\)</span>)</p>
+<h3 id="further-details-on-kl-divergence">Further details on KL-Divergence</h3>
+<p>There are several properties of KL divergence that make it useful as a sort of “distance” function between probability distribution. As we saw previously, the KL divergence measures how many relative bits we require to encode our symbol <span class="math inline">\(X\)</span> if we are assuming that it follows the distribution <span class="math inline">\(Q\)</span> rather than <span class="math inline">\(P\)</span>.</p>
+<p>First, the KL divergence is always non-negative. This means that we need extra bits to encode X when we use a distribution <span class="math inline">\(Q\)</span> to approximate <span class="math inline">\(P\)</span>, <em>unless</em> we are able to find the exact <span class="math inline">\(Q = P\)</span>.</p>
+<p>To be more mathematically precise, <span class="math inline">\(D_{KL}(P || Q) \geq 0\)</span> and <span class="math inline">\(D_{KL}(P || Q) = 0 \text{ if and only if } P = Q\)</span>.</p>
+<p>These two properties are convenient for measuring distances, similar to how we would imagine using a tape measure:</p>
+<ul>
+<li>The length from my start point to my end point is never negative</li>
+<li>If my start and end point are in the same spot, then my length is zero. Also, if my length is zero, that means my start and end point are the same.</li>
+</ul>
+<p>There is, however, a nuance compared to the tape measure case. The length from point A to B should be the same as the length from B to A, <em>but</em> with the KL divergence, this isn’t the case, as the KL divergence is not symmetric!</p>
+<p>This means that <span class="math inline">\(D_{KL}(P || Q) \neq D_{KL}(Q || P)\)</span>.</p>
+<p>However, we can still use it as a sort of distance measure between two different probability distributions, as long as we are careful.</p>
+<h2 id="machine-learning">Machine-learning</h2>
+<p>We’ve now spent a considerable amount of time discussing bits, symbols and Bob’s weird fascination with the weather. Where do the concepts of entropy apply in machine learning?</p>
+<p>For this part, I want to focus on cross-entropy and KL divergence separately, and we’ll be looking at two settings:</p>
+<ol type="1">
+<li>KL divergence as a probability measure</li>
+<li>Cross-Entropy Loss</li>
+</ol>
+<h3 id="kl-divergence-for-probability-distributions">KL Divergence for probability distributions</h3>
+<p>In machine learning, we often have some complicated <em>true</em> distribution <span class="math inline">\(P\)</span> that consists of the data, and we are trying to learn a distribution <span class="math inline">\(Q\)</span> that approximates this true distribution. To emphasize that we are learning this distribution, we say that <span class="math inline">\(Q_{\theta}\)</span> is a parametric distribution with parameters <span class="math inline">\(\theta\)</span>. In machine learning, we typically find the optimal <span class="math inline">\(\theta\)</span> using gradient descent.</p>
+<p>In order to learn this distribution, we need to know how close our approximate distribution is to the true distribution, and voila, we need some <em>distance</em> between the true distribution of our data and our learned approximate distribution!</p>
+<p>Why can’t we borrow a commonly used distance function, like squared euclidian distance, ie. <span class="math inline">\(\sum_{x \in X}|p(x) - q_{\theta}(x)|^2\)</span> ? Let’s show this graphically. Below we have two different distributions, one with two sharp peaks with with little overlap, and another with spread out distributions that have some areas that are far apart.</p>
+<p><img src="pictures/two_distrib.jpg" /></p>
+<p>If we use the Euclidian distance in the top image, the points in the distributions are pretty close together (in absolute terms) and so the value of this distance will be relatively small. For the distributions at the bottom of the image, the absolute values between the different points on the the two curves will be large, and so the euclidian distance will be relatively large.</p>
+<p>This isn’t how we want our function to work, as we want it to account for the shape of the distribution and have a small difference for the overlapping distributions, and a larger one for the non-overlapping ones.</p>
+<p>How does the KL divergence account for this? As we know, it tells us how many more bits are required to encode another distribution if we assume that we are encoding from our distribution. This inherently captures the “shape” of the distribution and it both intuitively and theoretically captures the property of accounting for how much overlap is present within the distributions.</p>
+<p>Another cool connection is that Maximum Likelihood Estimation (ie. maximizing the MLE term) is actually equivalent to minimizing the KL divergence, as derived in this <a href="https://wiseodd.github.io/techblog/2017/01/26/kl-mle/">blog post</a>. This requires some further background but is highly recommended reading for those interested!</p>
+<h4 id="support">Support</h4>
+<p>In the information theory setting, we assumed that our “alphabet” of symbols <span class="math inline">\(X\)</span> was the same for the distributions <span class="math inline">\(P\)</span> and <span class="math inline">\(Q_{\theta}\)</span>. However, this doesn’t always have to be true, and the <em>support</em>, the places where each distribution has non-zero values, might be different for both distributions.</p>
+<p>To make that even more clear, the support of the distribution <span class="math inline">\(P\)</span> is wherever <span class="math inline">\(P(x) \neq 0\)</span> for some <span class="math inline">\(x\)</span>. If we look at our usual definition of KL divergence as:</p>
+<p><span class="math display">\[
+ D_{KL}(P || Q_{\theta}) = \sum_{x \in X} P(x)\log  \frac{P(x)}{Q_{\theta}(x)}
+\]</span></p>
+<p>We notice that there’s a fraction <span class="math inline">\(\frac{P(x)}{Q_{\theta}(x)}\)</span> within the <span class="math inline">\(\log\)</span> term. If <span class="math inline">\(Q_{\theta}(x)\)</span> is 0 for some <span class="math inline">\(x\)</span> but <span class="math inline">\(P(x) \gt 0\)</span>, then this term blows up and goes to infinity! More mathematically, we need the <em>support</em> of <span class="math inline">\(P\)</span> to be within <span class="math inline">\(Q_{\theta}\)</span>, otherwise the KL divergence goes to infinity.</p>
+<h4 id="forward-and-reverse-kl">Forward and Reverse KL</h4>
+<p>We’ve discussed that KL divergence can be used to measure the distance between distributions, through this lens of information gain. When does this come up in practice?</p>
+<p>Similarly to the information theory setting, we can assume that there is a true distribution <span class="math inline">\(P\)</span> that we are trying to approximate with the distribution <span class="math inline">\(Q_{\theta}\)</span>.</p>
+<p>First consider minimizing <span class="math inline">\(D_{KL}(P || Q_{\theta})\)</span>, the usual KL divergence term. This is called <em>forward-mode</em> KL divergence, where we are measuring the KL divergence assuming that <span class="math inline">\(P\)</span> is the true distribution (as it should be).</p>
+<p>However, we can equally speak about <em>reverse-mode</em> KL divergence, where the “true” distribution is our approximated distribution <span class="math inline">\(Q_{\theta}\)</span> which is defined as <span class="math inline">\(D_{KL}(Q_{\theta} || P)\)</span></p>
+<p>Why does this matter? KL divergence is not symmetric (in general) so <span class="math inline">\(D_{KL}(P || Q_{\theta}) \neq D_{KL}(Q_{\theta} || P)\)</span></p>
+<p>Here’s the rule of thumb that I like to use: if we have supervision/labelled data, we should be using <em>forward mode</em> KL divergence, and if we do not, we should use <em>reverse-mode</em> KL divergence. In essence, the labels/supervision give us the true distribution in our problem, so we should opt to use that if we can.</p>
+<p>Let’s get a little more insights into how these two behave differently. We’ll be trying to fit a distribution to the following “true” distribution <span class="math inline">\(P\)</span>, shown here:</p>
+<p><img src="pictures/distrib_alone.jpg" /></p>
+<p>We are trying to minimize either the forward KL or reverse KL, which means that we’ll be trying to fit a distribution <span class="math inline">\(Q_{\theta}\)</span> that minimizes either one of these “distances”.</p>
+<h4 id="forward-mode-kl">Forward Mode KL</h4>
+<p>As before, we can decompose the KL divergence into cross-entropy and entropy terms:</p>
+<p><span class="math display">\[
+ D_{KL}(P || Q_{\theta}) = H(P, Q_{\theta}) - H(P)
+\]</span></p>
+<p>In the forward KL case, we have no control over the entropy term <span class="math inline">\(H(P)\)</span> which isn’t a function of <span class="math inline">\(Q_{\theta}\)</span> and the best we can do is minize the cross-entropy term <span class="math inline">\(H(P, Q_{\theta})\)</span>.</p>
+<p>The cross-entropy term is:</p>
+<p><span class="math display">\[
+H(P, Q_{\theta}) = \mathbb{E}_{x \sim P}[\log \frac{1}{Q_{\theta}(x)}] = \sum_{x \in X} P(x)\log  \frac{1}{Q_{\theta}(x)} 
+\]</span></p>
+<p>As we saw in the <em>support</em> section, if <span class="math inline">\(P(x) &gt; 0\)</span> but <span class="math inline">\(Q_{\theta}(x) = 0\)</span>, the cross-entropy goes to infinity. To avoid this when minimizing the loss, our approximated <span class="math inline">\(Q_{\theta}(x)\)</span> will spread out to be defined everywhere that <span class="math inline">\(P(x)\)</span> has support.</p>
+<p>Visually, this looks like the following (where the red curve is <span class="math inline">\(P\)</span> and the blue curve is <span class="math inline">\(Q_{\theta}\)</span>):</p>
+<p><img src="pictures/forward_kl.jpg" /></p>
+<p>This behaviour is called <em>zero-avoiding</em>, as the approximated distribution avoids being <span class="math inline">\(0\)</span> in places where the true distribution is <em>non-zero</em>.</p>
+<p>The other major quality of the cross-entropy term is that our approximated distribution <span class="math inline">\(Q_{\theta}\)</span> should have high probability where <span class="math inline">\(P\)</span> has high probability. <em>However</em>, the forward KL does not heavily penalize those places where <span class="math inline">\(P\)</span> is low, but <span class="math inline">\(Q_{\theta}\)</span> is high (such as the spot between the two peaks of the red curve). This is called <em>mean-seeking</em> behaviour.</p>
+<h4 id="reverse-mode-kl">Reverse Mode KL</h4>
+<p>We can do a similar decomposition to the reverse mode KL as we did for the forward KL:</p>
+<p><span class="math display">\[
+ D_{KL}(Q_{\theta} || P) = H(Q_{\theta}, P) - H(Q_{\theta})
+\]</span></p>
+<p>where:</p>
+<p><span class="math display">\[
+H(Q_{\theta}, P) = \mathbb{E}_{x \sim Q_{\theta}}[\log \frac{1}{P(x)}] = \sum_{x \in X} Q_{\theta}(x)\log  \frac{1}{P(x)}
+\]</span></p>
+<p>and</p>
+<p><span class="math display">\[
+H(Q_{\theta}) = \mathbb{E}_{x \sim Q_{\theta}}[\log \frac{1}{Q_{\theta}(x)}]  = \sum_{x \in X} Q_{\theta}(x)\log \frac{1}{Q_{\theta}(x)}
+\]</span></p>
+<p>How does the reverse KL behave? The entropy term <span class="math inline">\(H(Q_{\theta})\)</span> grows larger when the distribution <span class="math inline">\(Q_{\theta}\)</span> is more spread out (recall: more spread out == more “uncertainty”, leading to higher entropy). This term stops our approximated distribution <span class="math inline">\(Q_{\theta}\)</span> from being too narrow.</p>
+<p>The cross-entropy term behaves differently than in the forward mode KL case. Here’s a visual example:</p>
+<p><img src="pictures/reverse_kl.jpg" /></p>
+<p>The <em>support</em> of <span class="math inline">\(P\)</span> is no longer a critical factor in our approximated distribution, as the <span class="math inline">\(Q_{\theta}\)</span> curve might only overlap with part of the <span class="math inline">\(P\)</span> distribution. This is known as <em>zero-forcing</em> behaviour, because our approximated <span class="math inline">\(Q_{\theta}\)</span> may ignore parts of the distribution where <span class="math inline">\(P\)</span> is lower and force it to go to <span class="math inline">\(0\)</span>.</p>
+<p>Similarly, the cross-entropy term is minimized when samples in <span class="math inline">\(Q_{\theta}\)</span> that have high probability also have high-probability under <span class="math inline">\(P\)</span>. Combined with the <em>zero-forcing</em> behaviour, the reverse KL collapses on one of the peaks (or the <em>modes</em>) of our true distribution <span class="math inline">\(P\)</span>, since that is high probability under <span class="math inline">\(Q_{\theta}\)</span>. This leads to to the reverse KL having <em>mode-seeking</em> behaviour, where it might collapse to one of the peaks/modes of the true distribution.</p>
+<p><strong>Takeaways</strong>: KL divergence behaves differently depending on whether <span class="math inline">\(P\)</span> or <span class="math inline">\(Q_{\theta}\)</span> is the true distribution. Unfortunately, we do not always have a choice between forward and reverse KL. This depends on where we can get <em>samples</em> of <span class="math inline">\(x\)</span> from, to estimate the expectation term in the KL divergence.</p>
+<p>If we have supervision/labelled data, we can get samples <span class="math inline">\(x\)</span> from the true distribution <span class="math inline">\(P\)</span>, and so we can use forward KL.</p>
+<p>In an unsupervised ML setting, we are only be able to sample <span class="math inline">\(x\)</span> from <span class="math inline">\(Q_{\theta}\)</span>, so we are forced to use the reverse KL.</p>
+<p>Still, it’s useful to understand the differences between the two directions of KL divergence when you are implementing real-world machine learning models!</p>
+<h3 id="cross-entropy-loss">Cross-Entropy Loss</h3>
+<p>Let’s assume that we are performing a classification task, with three classes, cats, dogs, and lizards. We’ve built some fancy neural network model <span class="math inline">\(f\)</span>, that takes in an image <span class="math inline">\(x\)</span>, and outputs a prediction: <span class="math inline">\(\hat{y} = f(x)\)</span>. For our problem, we know that the actual class of image <span class="math inline">\(x\)</span> is <span class="math inline">\(y\)</span>, and we want to optimize our model such that we can predict <span class="math inline">\(\hat{y}\)</span> “close” to <span class="math inline">\(y\)</span>.</p>
+<p>First, we will squash the output of our neural network so that our output <span class="math inline">\(\hat{y}\)</span> looks like a probability distribution. We want this probability distribution to tell us how likely it is that <span class="math inline">\(x\)</span> belongs to our 3 classes: cat, dog and lizard, so our <span class="math inline">\(\hat{y}\)</span> looks like a vector of length 3, whose elements sum to 1, and each term is non-zero. We can do this with the <a href="https://en.wikipedia.org/wiki/Softmax_function">softmax</a> function, which can take some arbitrary numbers and squish them into a nice probability distribution.</p>
+<p>Next, we know our true class label, <span class="math inline">\(y\)</span>. To make sure that this aligns with the output of our vector <span class="math inline">\(\hat{y}\)</span>, we turn this into a vector of length 3, assigning a 1 to the correct class and a 0 to the incorrect class. Notice how this also sums to 1 and satisfies the properties of a probability distribution!</p>
+<p>Now, we have two vectors <span class="math inline">\(y\)</span> and <span class="math inline">\(\hat{y}\)</span>, which we interpret as two probability distributions, <span class="math inline">\(P\)</span> and <span class="math inline">\(Q_{\theta}\)</span>. We would like to minimize the difference between these two distributions. Here, our true distribution is <span class="math inline">\(P\)</span> and our approximated distribution is <span class="math inline">\(Q_{\theta}\)</span>.</p>
+<p>Let’s make this concrete with a picture: <img src="pictures/cat_classifier.jpg" /></p>
+<p>First, notice that having the label <span class="math inline">\(y\)</span> tells us that the true distribution for the image <span class="math inline">\(x\)</span> is <span class="math inline">\(P\)</span>, which we are approximating with <span class="math inline">\(Q_{\theta}\)</span>.</p>
+<p>Now, which one of our two main concepts should we apply: KL divergence or cross-entropy? Our gut instinct might be KL divergence, after all, there was a whole section on using it to measure distances between probability distributions.</p>
+<p>Let’s write out the expression for KL divergence, in terms of entropy and cross-entropy: <span class="math display">\[
+ D_{KL}(P || Q_{\theta}) = H(P, Q_{\theta}) - H(P)
+\]</span></p>
+<p>Here, notice that the second term, <span class="math inline">\(H(P)\)</span> does not depend on our classifier, as that is the entropy of the true distribution and is outside of our control! Hence, if we want to minimize this term, we may as well minimize the cross-entropy <span class="math inline">\(H(P, Q_{\theta})\)</span>, which is affected by our classifier output.</p>
+<p>When we want to minimize something in optimization, we typically call it a “loss” function, and so we label the term <span class="math inline">\(H(P,Q_{\theta})\)</span> as the cross-entropy loss. Returning to our example, here’s how that looks like: <img src="pictures/entropy_calc.jpg" /></p>
+<p>There’s a couple of simple tricks in there that make the calculation a little different from what we’ve seen before. We use the simple <span class="math inline">\(\log\)</span> identity: <span class="math inline">\(\log (\frac{1}{x}) = -\log(x)\)</span> to get rid of the fraction in the cross-entropy loss term. We also replace the summation of each term with a dot product between the two vectors representing <span class="math inline">\(P\)</span> and <span class="math inline">\(Q_{\theta}\)</span>.</p>
+<p>After applying these tricks, we see that the cross-entropy loss is 0.322, which represents the average number of bits needed to encode the cat image using our model. Note that the true distribution <span class="math inline">\(P\)</span> is fully deterministic, with no uncertainty (ie. <span class="math inline">\(x\)</span> is always a cat), and so the entropy is zero! This means that our predictor still has some ways to go before it can perfectly predict the cat image and obtain zero loss.</p>
+<p>So, we now know that the cross-entropy loss term refers to how many bits of information we need to encode the actual label of our cat image <span class="math inline">\(x\)</span>, with the code that we made with our model <span class="math inline">\(Q_{\theta}\)</span>. That’s the story behind cross-entropy loss!</p>
+<h3 id="summary">Summary</h3>
+<p>To conclude, entropy, cross-entropy and KL divergence are concepts in information theory that measure how much information can be gained and have deep ties to the loss functions in machine learning. Please take a look at the references below for more details and cool insights!</p>
+<h3 id="references">References</h3>
+<ul>
+<li>Professor Wei Yu’s information theory <a href="https://www.comm.utoronto.ca/~weiyu/ece1502/">course</a></li>
+<li>Textbook: <a href="http://staff.ustc.edu.cn/~cgong821/Wiley.Interscience.Elements.of.Information.Theory.Jul.2006.eBook-DDU.pdf">Elements of Information Theory</a></li>
+<li>Blog Post: <a href="https://wiseodd.github.io/techblog/2016/12/21/forward-reverse-kl/">KL Divergence: Forward vs Reverse?</a></li>
+<li>Blog Post: <a href="https://dibyaghosh.com/blog/probability/kldivergence.html">KL Divergence for Machine Learning</a></li>
+<li>YouTube Video: <a href="https://www.youtube.com/watch?v=ErfnhcEV1O8&amp;t=350s">A Short Introduction to Entropy, Cross-Entropy and KL-Divergence</a></li>
+<li>Blog Post: <a href="https://wiseodd.github.io/techblog/2017/01/26/kl-mle/">Maximizing likelihood is equivalent to minimizing KL-Divergence</a></li>
+</ul>
+</body>
+</html>
