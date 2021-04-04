@@ -44,13 +44,13 @@ $$
 
 ## Entropy
 
-What is entropy and why do we use care about in machine learning? Entropy comes up in many fields, including physics, thermodynamics, but today I'll be discussing it in terms of _information_.
+What is entropy and why do we use it in machine learning? Entropy comes up in many fields, including physics, thermodynamics, but today I'll be discussing it in terms of _information_.
 
 Mathematically, entropy is defined as: 
 $$
-H(X) = \mathbb{E}_{x \sim P}[\log \frac{1}{P(X)}] = \sum_{x \in X} P(x)\log \frac{1}{P(x)}
+H(X) = \mathbb{E}_{X \sim P}[\log \frac{1}{P(X)}] = \sum_{x \in X} P(x)\log \frac{1}{P(x)}
 $$
-where $X$ is a random variable and $P$ is a distribution.
+where $X$ is a random variable and $P$ is its distribution.
 
 What does this value represent? Intuitively, it measures how many _bits_ are needed to describe a variable $X$ (when using $\log$ base 2). A _bit_ is a unit in computing, which can only be a 1 or 0. 
 
@@ -77,16 +77,16 @@ How should we assign a binary code to these symbols? The natural approach is to 
 | D             | 1/8                  | 11    |
 
 
-Next, we'll assume that we are trying to transmit some random sequence of these symbols A, B, C, D, which will naturally follow the distribution $P$. Since we don't know what the message is actually going to be, we'll want to find the _expected_ length of the code, where $L(X)$ denotes the length of the assigned code to the symbol.
+Next, we'll assume that we are trying to transmit some random sequence of these symbols A, B, C, D, which will naturally follow the distribution $P$. We care about the _length_ of the code, ie. the number of bits that each symbol takes up, ex. symbol A has length 2. Since we don't know what the message is actually going to be, we'll want to find the _expected_ length of the code, where $L(X)$ denotes the length of the assigned code to the symbol.
 
 $$
-\mathbb{E}[L(X)] = \sum_{x} P(x) L(x)
+\mathbb{E}[L(X)] = \sum_{x \in X} P(x) L(x)
 $$
 
 In this case, all the codes have length 2, so the expectation is:
 
 $$
-\mathbb{E}[L(X)] = \sum_{x} P(x) L(x) = \frac{1}{2} \cdot 2 + \frac{1}{4}  \cdot 2  + \frac{1}{8}  \cdot 2  + \frac{1}{8} \cdot 2 = 2
+\mathbb{E}[L(X)] = \sum_{x \in X} P(x) L(x) = \frac{1}{2} \cdot 2 + \frac{1}{4}  \cdot 2  + \frac{1}{8}  \cdot 2  + \frac{1}{8} \cdot 2 = 2
 $$
 
 This means that the average length of transmitted code is 2. For example, if we were to send a message consisting of A, B, C, D of length 10, on average this would require 20 digits! While this approach is intuitive, it's not optimal. Why? We aren't making use of the different probabilities assigned to each symbol. Instead, let's try using:
@@ -102,7 +102,7 @@ This means that the average length of transmitted code is 2. For example, if we 
 The expected average length of the code is:
 
 $$
-\mathbb{E}[L(X)] = \sum_{x} p(x) L(x) = \frac{1}{2} \cdot 1 + \frac{1}{4}  \cdot 2  + \frac{1}{8}  \cdot 3  + \frac{1}{8} \cdot 3 = 1.75
+\mathbb{E}[L(X)] = \sum_{x \in X} p(x) L(x) = \frac{1}{2} \cdot 1 + \frac{1}{4}  \cdot 2  + \frac{1}{8}  \cdot 3  + \frac{1}{8} \cdot 3 = 1.75
 $$
 
 Which is shorter than 2. What's more, this is _exactly_ equal to $H(X)$ (entropy), since:
@@ -111,7 +111,7 @@ $$
 H(X) = \sum_{x \in X} P(x)\log  \frac{1}{P(x)} = \frac{1}{2} \cdot \log 2 + \frac{1}{4}  \cdot \log 4  + \frac{1}{8}  \cdot \log 8  + \frac{1}{8} \cdot \log 8 = 1.75 
 $$
 
-This is no coincidence! In fact, entropy gives us the minimum number of bits needed to describe a symbol $X$. If we do some pattern matching between $H(X)$ and $\mathbb{E}[L(X)]$, we recognize that the length of the optimal code for a symbol should be $\log \frac{1}{P(X)}$. As with our formula for expected length, the entropy equation itself is an expectation, ie:
+This is no coincidence! In fact, entropy gives us the minimum number of bits needed to describe a symbol $X$. If we do some pattern matching between $H(X)$ and $\mathbb{E}[L(X)]$, we recognize that the length of the optimal code for a symbol X should be $\log \frac{1}{P(X)}$. As with our formula for expected length, the entropy equation itself is an expectation, ie:
 $$
 H(X) = \mathbb{E}[\log \frac{1}{P(X)}] = \sum_{x \in X} P(x)\log  \frac{1}{P(x)}  
 $$
@@ -126,7 +126,7 @@ In the last section, I described the formula for entropy and discussed what it m
 
 Let's assume Bob is a statistics nerd who's been sending the weather of his travels to his fiance, Alice. He stays at a place in the country, and then sends a binary code at the end of the trip that tells her all the days that it's been rainy and sunny.
 
-First, Bob stays in San Francisco for 100 days (they have a long-distance relationship). There, he knows that the weather follows the following pattern:
+First, Bob stays in San Francisco (SF) for 100 days (they have a long-distance relationship). There, he knows that the weather follows the following pattern:
 
 | Weather - $X$  | Frequency - $P$   |
 |:-------------:|:--------------------:|
@@ -144,7 +144,7 @@ Next, he visits Nevada - Death Valley for 100 days. There, he knows the weather 
 
 Here, Bob believes that _on average_, he should only get 1 day of rain in his 100 day stay. Hence, he changes his code to be the _day on which rain occurs in Death Valley_. Ex. if it rains on the second day, he sends the binary symbol for a 2 ie. 01. For this code, he needs to be able to encode up to the value 100, in case it rains on the 100th day. This means he'll need up to log(100), or ~7 digits.
 
-Hence, the average amount of information per day in Death Valley is ~0.07, since ~7/100 = 0.07.
+Hence, the average amount of information per day in Death Valley is ~0.07, since 7/100 = 0.07.
 
 Does this match up with our definition of entropy? Let's substitute the frequencies from our tables for SF and Death Valley.
 
@@ -169,7 +169,7 @@ Now, a couple questions may arise:
 
 These are both very good questions. For Question 1, the answer is that this isn't a practical code but instead a code for the "average case". This is reasonable because we can prove that when you observe a lot of events/symbols in a sequence, it becomes very likely that the frequency of the symbols will match your distribution. For example, Bob can reasonably expect to get around 1/100 days of rain if he stays in Nevada for 1 million days.
 
-Question 2 is a key insight into what entropy is actually measuring. One can think of entropy as the amount of uncertainty about something. Intuitively, it's harder to compress random sequences than patterned ones, because you can't leverage any patterns in the random sequences! For a discrete set of symbols, variables that come from a uniform distribution (each symbol is equally likely), are the ones that have highest entropy, ie: the highest uncertainty/information.
+Question 2 is a key insight into what entropy is actually measuring. One can think of entropy as the amount of uncertainty about something. Intuitively, it's harder to compress random sequences than patterned ones, because you can't leverage any patterns in the random sequences! For a discrete set of symbols, variables that come from a uniform distribution (each symbol is equally likely), are the ones that have highest entropy, i.e, the highest uncertainty/information.
 
 
 ## KL Divergence and Cross Entropy
@@ -183,15 +183,17 @@ From our entropy term, we know that $\log \frac{1}{P(X)}$ gives us the length of
 As before, we want to figure out how long the average code is using this scheme, which means that we use expectation. Note that, the expectation is with respect to the distribution $P$, since the variable follows that distribution, not our approximated $Q$ term.
 
 $$
-\mathbb{E}_{x \sim P}[\log \frac{1}{Q(X)}] = \sum_{x \in X} P(x)\log  \frac{1}{Q(x)} 
+\mathbb{E}_{X \sim P}[\log \frac{1}{Q(X)}] = \sum_{x \in X} P(x)\log  \frac{1}{Q(x)} 
 $$
 
 In fact, this _is_ cross entropy (denoted by $H(p, q)$! In other words, we are measuring how many bits we will need to describe a symbol $X \sim P$ if we use a coding scheme meant for $X \sim Q$. 
 
-In the last section, we learned that the optimal code for $X \sim P$ is given by $H(X)$. A natural question to ask is, how many more extra bits do we need to use when using the "wrong" code for $Q$ compared to the optimal code? This is simply $H(P, Q) - H(P)$ or:
+In the last section, we learned that the optimal code for $X \sim P$ is given by $H(X)$. A natural question to ask is, how many more extra bits do we need to use when using the "wrong" code for $Q$ compared to the optimal code for $P$? This is simply $H(P, Q) - H(P)$ or:
 
 $$
- D_{KL}(P || Q) = H(P, Q) - H(P) = \sum_{x \in X} P(x)\log  \frac{1}{Q(x)}  - \sum_{x \in X} P(x)\log  \frac{1}{P(x)}  =\sum_{x \in X} P(x)\log  \frac{P(x)}{Q(x)} 
+\begin{aligned}
+ D_{KL}(P || Q) &= H(P, Q) - H(P)\\ &= \sum_{x \in X} P(x)\log  \frac{1}{Q(x)}  - \sum_{x \in X} P(x)\log  \frac{1}{P(x)}\\  &=  \sum_{x \in X} P(x)\log  \frac{P(x)}{Q(x)} 
+ \end{aligned}
 $$
 
 Here, I've taken the extra-step and equated the term $D_{KL}(P || Q)$ to this expression, or the KL divergence. In other words, KL divergence measures the relative gain of bits that we require to encode our symbol if we are using a different code.
@@ -215,7 +217,7 @@ There is, however, a nuance compared to the tape measure case. The length from p
 
 This means that $D_{KL}(P || Q) \neq D_{KL}(Q || P)$. 
 
-However, we can still use it as a sort of distance measure between two different probability distributions, as long as we are careful. 
+However, we can still use it as a sort of distance measure between two different probability distribution.
 
 ## Machine-learning
 
@@ -245,16 +247,15 @@ How does the KL divergence account for this? As we know, it tells us how many mo
 Another cool connection is that Maximum Likelihood Estimation (ie. maximizing the MLE term) is actually equivalent to minimizing the KL divergence, as derived in this [blog post](https://wiseodd.github.io/techblog/2017/01/26/kl-mle/). This requires some further background but is highly recommended reading for those interested!
 
 #### Support
-In the information theory setting, we assumed that our "alphabet" of symbols $X$ was the same for the distributions $P$ and $Q_{\theta}$. However, this doesn't always have to be true, and the _support_, the places where each distribution has non-zero values, might be different for both distributions. 
+In the information theory setting, we assumed that our "alphabet" of symbols $X$ was the same for the distributions $P$ and $Q_{\theta}$. However, this doesn't always have to be true as each distribution may have non-zero values for different values of $x$, also known as having different _support_.
 
-To make that even more clear, the support of the distribution $P$ is wherever $P(x) \neq 0$ for some $x$. 
-If we look at our usual definition of KL divergence as:
+To make that even more clear, the support of the distribution $P$ is defined as $S = \{x \in X \mid P(x) \neq 0\}$, ie. the set of $x$ values for which the distribution is non-zero. If we look at our usual definition of KL divergence as:
 
 $$
  D_{KL}(P || Q_{\theta}) = \sum_{x \in X} P(x)\log  \frac{P(x)}{Q_{\theta}(x)}
 $$
 
-We notice that there's a fraction $\frac{P(x)}{Q_{\theta}(x)}$ within the $\log$ term. If $Q_{\theta}(x)$ is 0 for some $x$ but $P(x) \gt 0$, then this term blows up and goes to infinity! More mathematically, we need the _support_ of $P$ to be within $Q_{\theta}$, otherwise the KL divergence goes to infinity.
+We notice that there's a fraction $\frac{P(x)}{Q_{\theta}(x)}$ within the $\log$ term. If $Q_{\theta}(x)$ is $0$ for some $x$ but $P(x) \gt 0$, then this term blows up and goes to infinity! More mathematically, we need the _support_ of $P$ to be within $Q_{\theta}$, otherwise the KL divergence goes to infinity.
 
 #### Forward and Reverse KL
 
@@ -325,7 +326,7 @@ H(Q_{\theta}) = \mathbb{E}_{x \sim Q_{\theta}}[\log \frac{1}{Q_{\theta}(x)}]  = 
 $$
 
 
-How does the reverse KL behave? The entropy term $H(Q_{\theta})$ grows larger when the distribution $Q_{\theta}$ is more spread out (recall: more spread out == more "uncertainty", leading to higher entropy). This term stops our approximated distribution $Q_{\theta}$ from being too narrow.
+How does the reverse KL behave? The entropy term $H(Q_{\theta})$ grows larger when the distribution $Q_{\theta}$ is more spread out (recall: more spread out == more "uncertainty", leading to higher entropy). This term stops our approximated distribution $Q_{\theta}$ from being too narrow, since we are optimizing for the negative of this entropy term.
 
 The cross-entropy term behaves differently than in the forward mode KL case. Here's a visual example:
 
