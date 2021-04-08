@@ -172,8 +172,9 @@ These are both very good questions. For Question 1, the answer is that this isn'
 Question 2 is a key insight into what entropy is actually measuring. One can think of entropy as the amount of uncertainty about something. Intuitively, it's harder to compress random sequences than patterned ones, because you can't leverage any patterns in the random sequences! For a discrete set of symbols, variables that come from a uniform distribution (each symbol is equally likely), are the ones that have highest entropy, i.e, the highest uncertainty/information.
 
 
-## KL Divergence and Cross Entropy
+## Cross-Entropy & KL Divergence 
 
+### Cross-Entropy: $H(P, Q)$
 Now, you should have a pretty good idea of what entropy is. Where does cross-entropy come in?
 
 As we said before, entropy tells us how many bits are needed to describe a symbol $X$ given that it follows a distribution $P$. But what happens if we don't know the distribution $P$? Well in this case, we want to figure out just how bad (how long) our code will be if we don't know it. Of course, we can make some assumptions about what $P$ looks like and approximate it with a distribution, say $Q$.
@@ -186,8 +187,9 @@ $$
 \mathbb{E}_{X \sim P}[\log \frac{1}{Q(X)}] = \sum_{x \in X} P(x)\log  \frac{1}{Q(x)} 
 $$
 
-In fact, this _is_ cross entropy (denoted by $H(p, q)$! In other words, we are measuring how many bits we will need to describe a symbol $X \sim P$ if we use a coding scheme meant for $X \sim Q$. 
+In fact, this _is_ cross-entropy (denoted by $H(P, Q)$! In other words, we are measuring how many bits we will need to describe a symbol $X \sim P$ if we use a coding scheme meant for $X \sim Q$. 
 
+### KL Divergence: $D_{KL}(P || Q)$
 In the last section, we learned that the optimal code for $X \sim P$ is given by $H(X)$. A natural question to ask is, how many more extra bits do we need to use when using the "wrong" code for $Q$ compared to the optimal code for $P$? This is simply $H(P, Q) - H(P)$ or:
 
 $$
@@ -263,13 +265,13 @@ We've discussed that KL divergence can be used to measure the distance between d
 
 Similarly to the information theory setting, we can assume that there is a true distribution $P$ that we are trying to approximate with the distribution $Q_{\theta}$. 
 
-First consider minimizing $D_{KL}(P || Q_{\theta})$, the usual KL divergence term. This is called *forward-mode* KL divergence, where we are measuring the KL divergence assuming that $P$ is the true distribution (as it should be).
+First consider minimizing $D_{KL}(P || Q_{\theta})$, the usual KL divergence term. This is called *forward* KL divergence, where we are measuring the KL divergence assuming that $P$ is the true distribution (as it should be).
 
-However, we can equally speak about *reverse-mode* KL divergence, where the "true" distribution is our approximated distribution $Q_{\theta}$ which is defined as $D_{KL}(Q_{\theta} || P)$
+However, we can equally speak about *reverse* KL divergence, where the "true" distribution is our approximated distribution $Q_{\theta}$ which is defined as $D_{KL}(Q_{\theta} || P)$
 
 Why does this matter? KL divergence is not symmetric (in general) so $D_{KL}(P || Q_{\theta}) \neq D_{KL}(Q_{\theta} || P)$
 
-Here's the rule of thumb that I like to use: if we have supervision/labelled data, we should be using *forward mode* KL divergence, and if we do not, we should use *reverse-mode* KL divergence. In essence, the labels/supervision give us the true distribution in our problem, so we should opt to use that if we can.
+Here's the rule of thumb that I like to use: if we have supervision/labelled data, we should be using *forward* KL divergence, and if we do not, we should use *reverse* KL divergence. In essence, the labels/supervision give us the true distribution in our problem, so we should opt to use that if we can.
 
 Let's get a little more insights into how these two behave differently. We'll be trying to fit a distribution to the following "true" distribution $P$, shown here:
 
@@ -277,7 +279,7 @@ Let's get a little more insights into how these two behave differently. We'll be
 
 We are trying to minimize either the forward KL or reverse KL, which means that we'll be trying to fit a distribution $Q_{\theta}$ that minimizes either one of these "distances".  
 
-#### Forward Mode KL
+#### Forward KL
 
 As before, we can decompose the KL divergence into cross-entropy and entropy terms:
 
@@ -304,9 +306,9 @@ This behaviour is called _zero-avoiding_, as the approximated distribution avoid
 
 The other major quality of the cross-entropy term is that our approximated distribution $Q_{\theta}$ should have high probability where $P$ has high probability. _However_, the forward KL does not heavily penalize those places where $P$ is low, but $Q_{\theta}$ is high (such as the spot between the two peaks of the red curve). This is called _mean-seeking_ behaviour.
 
-#### Reverse Mode KL
+#### Reverse KL
 
-We can do a similar decomposition to the reverse mode KL as we did for the forward KL:
+We can do a similar decomposition to the reverse KL as we did for the forward KL:
 
 
 $$
@@ -328,7 +330,7 @@ $$
 
 How does the reverse KL behave? The entropy term $H(Q_{\theta})$ grows larger when the distribution $Q_{\theta}$ is more spread out (recall: more spread out == more "uncertainty", leading to higher entropy). This term stops our approximated distribution $Q_{\theta}$ from being too narrow, since we are optimizing for the negative of this entropy term.
 
-The cross-entropy term behaves differently than in the forward mode KL case. Here's a visual example:
+The cross-entropy term behaves differently than in the forward KL case. Here's a visual example:
 
 ![](pictures/reverse_kl.jpg)
 
